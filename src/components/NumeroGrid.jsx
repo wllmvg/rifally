@@ -13,7 +13,7 @@ export default function NumeroGrid({ numeros, onClickNumero, soloVer = false }) 
         >
           {n.numero}
           {n.ganador && (
-            <span style={{ position: 'absolute', top: -6, right: -4, fontSize: 12 }}>🏆</span>
+            <span style={{ position: 'absolute', top: -6, right: -4, fontSize: 12 }}></span>
           )}
         </div>
       ))}

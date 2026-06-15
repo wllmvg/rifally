@@ -254,30 +254,30 @@ export default function CrearRifa({ user, onCreada, onBack, toast }) {
             <h4>Vista previa</h4>
             <div className="sidebar-preview-name">{nombre || 'Nombre de tu rifa'}</div>
             <div className="sidebar-preview-row">
-              <span>🎁 Premio</span>
+              <span> Premio</span>
               <span style={{ fontWeight: 600, maxWidth: 160, textAlign: 'right', wordBreak: 'break-word' }}>
                 {nombrePremio || '—'}
               </span>
             </div>
             <div className="sidebar-preview-row">
-              <span>🎟️ Números</span>
+              <span>️ Números</span>
               <span style={{ fontWeight: 600 }}>{totalNum || 0}</span>
             </div>
             {precio && (
               <div className="sidebar-preview-row">
-                <span>💵 Precio c/u</span>
+                <span> Precio c/u</span>
                 <span style={{ fontWeight: 600 }}>${Number(precio).toLocaleString('es-CO')}</span>
               </div>
             )}
             {colaboradores.length > 0 && (
               <div className="sidebar-preview-row">
-                <span>👥 Colaboradores</span>
+                <span> Colaboradores</span>
                 <span style={{ fontWeight: 600 }}>{colaboradores.length}</span>
               </div>
             )}
             {precio && totalNum && (
               <div className="sidebar-preview-row" style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                <span>📈 Recaudo total</span>
+                <span> Recaudo total</span>
                 <span style={{ fontWeight: 700, fontSize: 15 }}>
                   ${(Number(precio) * Number(totalNum)).toLocaleString('es-CO')}
                 </span>
@@ -310,7 +310,7 @@ export default function CrearRifa({ user, onCreada, onBack, toast }) {
           )}
 
           <div className="sidebar-tips">
-            <h4>💡 Consejos</h4>
+            <h4> Consejos</h4>
             <div className="sidebar-tip-item">
               <div className="sidebar-tip-dot"></div>
               <span>Pon un nombre llamativo que describa bien el premio.</span>

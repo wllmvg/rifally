@@ -127,7 +127,7 @@ export default function ModalColaboradores({ rifaId, onClose, toast }) {
 
         {lista.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px 0' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
+            <div style={{ fontSize: 32, marginBottom: 8 }}></div>
             <p style={{ color: 'var(--text3)', fontSize: 13 }}>Sin colaboradores aún</p>
             <p style={{ color: 'var(--text3)', fontSize: 12, marginTop: 4 }}>Agrega el correo de alguien que ya tenga cuenta en Rifally</p>
           </div>

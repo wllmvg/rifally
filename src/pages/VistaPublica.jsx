@@ -8,16 +8,16 @@ function Podio({ ganadores }) {
   const [primero, segundo, tercero] = ganadores;
 
   const orden = ganadores.length === 1
-    ? [{ g: primero, tipo: 'gold', emoji: '🥇', label: '1°' }]
+    ? [{ g: primero, tipo: 'gold', emoji: '', label: '1°' }]
     : ganadores.length === 2
     ? [
-        { g: segundo, tipo: 'silver', emoji: '🥈', label: '2°' },
-        { g: primero, tipo: 'gold', emoji: '🥇', label: '1°' },
+        { g: segundo, tipo: 'silver', emoji: '', label: '2°' },
+        { g: primero, tipo: 'gold', emoji: '', label: '1°' },
       ]
     : [
-        { g: segundo, tipo: 'silver', emoji: '🥈', label: '2°' },
-        { g: primero, tipo: 'gold', emoji: '🥇', label: '1°' },
-        { g: tercero, tipo: 'bronze', emoji: '🥉', label: '3°' },
+        { g: segundo, tipo: 'silver', emoji: '', label: '2°' },
+        { g: primero, tipo: 'gold', emoji: '', label: '1°' },
+        { g: tercero, tipo: 'bronze', emoji: '', label: '3°' },
       ];
 
   const alturas = { gold: 80, silver: 60, bronze: 44 };
@@ -60,13 +60,13 @@ function ModalVerNumeroPublico({ numero, onClose }) {
         )}
         {numero.apartado ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 28 }}>🔒</span>
+            <span style={{ fontSize: 28 }}></span>
             <p style={{ fontWeight: 600, fontSize: 16, color: 'var(--accent)' }}>Número apartado</p>
             <p style={{ fontSize: 13, color: 'var(--text3)' }}>Este número ya no está disponible</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 28 }}>✅</span>
+            <span style={{ fontSize: 28 }}></span>
             <p style={{ fontWeight: 600, fontSize: 16, color: 'var(--text)' }}>Número disponible</p>
             <p style={{ fontSize: 13, color: 'var(--text3)' }}>Contáctate con el organizador para apartarlo</p>
           </div>
@@ -129,16 +129,16 @@ export default function VistaPublica({ rifaId, user }) {
           <p style={{ marginTop: 4, fontSize: 14, opacity: 0.8 }}>${rifa.precio} por número</p>
         )}
         <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 20, fontSize: 14, opacity: 0.85 }}>
-          <span>🎟️ {numeros.length} números</span>
-          <span>🔒 {totalApartados} apartados</span>
-          <span>✅ {totalDisponibles} disponibles</span>
-          <span>📊 {pct}% vendido</span>
+          <span>️ {numeros.length} números</span>
+          <span> {totalApartados} apartados</span>
+          <span> {totalDisponibles} disponibles</span>
+          <span> {pct}% vendido</span>
         </div>
       </div>
 
       {/* Descripción */}
       <div className="card" style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 15, marginBottom: 10 }}>📋 Sobre esta rifa</h3>
+        <h3 style={{ fontSize: 15, marginBottom: 10 }}> Sobre esta rifa</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', fontSize: 14 }}>
           <div>
             <span style={{ color: 'var(--text3)' }}>Premio</span>
@@ -158,10 +158,10 @@ export default function VistaPublica({ rifaId, user }) {
             <span style={{ color: 'var(--text3)' }}>Estado</span>
             <p style={{ fontWeight: 600, marginTop: 2 }}>
               {rifa.estado === 'finalizada'
-                ? '🏆 Finalizada'
+                ? ' Finalizada'
                 : totalApartados === numeros.length
-                  ? '🔴 Agotada'
-                  : '🟢 Activa — quedan números disponibles'}
+                  ? ' Agotada'
+                  : ' Activa — quedan números disponibles'}
             </p>
           </div>
           {rifa.fecha_cierre && (
@@ -195,7 +195,7 @@ export default function VistaPublica({ rifaId, user }) {
           {motivosRegiro && motivosRegiro.length > 0 && (
             <div style={{ marginTop: 16, textAlign: 'left', background: 'var(--warning-light)', border: '1px solid var(--warning)', borderRadius: 'var(--radius)', padding: '10px 14px' }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning)', marginBottom: 6 }}>
-                ℹ️ Información sobre el sorteo
+                ️ Información sobre el sorteo
               </p>
               {motivosRegiro.map((r, i) => (
                 <p key={i} style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 2 }}>

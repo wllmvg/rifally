@@ -16,21 +16,21 @@ function Podio({ ganadores }) {
   if (!ganadores.length) return null;
   const [primero, segundo, tercero] = ganadores;
   const tipos = ['gold', 'silver', 'bronze'];
-  const emojis = ['🥇', '🥈', '🥉'];
+  const emojis = ['', '', ''];
   const alturas = ['podio-block gold', 'podio-block silver', 'podio-block bronze'];
 
   // Reorder for podium display: 2nd, 1st, 3rd
   const orden = ganadores.length === 1
-    ? [{ g: primero, tipo: 'gold', emoji: '🥇', bloque: alturas[0] }]
+    ? [{ g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] }]
     : ganadores.length === 2
     ? [
-        { g: segundo, tipo: 'silver', emoji: '🥈', bloque: alturas[1] },
-        { g: primero, tipo: 'gold', emoji: '🥇', bloque: alturas[0] },
+        { g: segundo, tipo: 'silver', emoji: '', bloque: alturas[1] },
+        { g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] },
       ]
     : [
-        { g: segundo, tipo: 'silver', emoji: '🥈', bloque: alturas[1] },
-        { g: primero, tipo: 'gold', emoji: '🥇', bloque: alturas[0] },
-        { g: tercero, tipo: 'bronze', emoji: '🥉', bloque: alturas[2] },
+        { g: segundo, tipo: 'silver', emoji: '', bloque: alturas[1] },
+        { g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] },
+        { g: tercero, tipo: 'bronze', emoji: '', bloque: alturas[2] },
       ];
 
   return (
@@ -263,7 +263,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           {motivosRegiro && motivosRegiro.length > 0 && (
             <div style={{ marginTop: 16, textAlign: 'left', background: 'var(--warning-light)', border: '1px solid var(--warning)', borderRadius: 'var(--radius)', padding: '10px 14px' }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning)', marginBottom: 6 }}>
-                ℹ️ Historial de regiros
+                ️ Historial de regiros
               </p>
               {motivosRegiro.map((r, i) => (
                 <p key={i} style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 2 }}>
@@ -279,7 +279,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       {rifa.estado === 'finalizada' && (
         <div className="share-banner">
           <div>
-            <p>🎉 <b>¡Rifa finalizada!</b> Comparte el enlace para que todos sepan quién ganó.</p>
+            <p> <b>¡Rifa finalizada!</b> Comparte el enlace para que todos sepan quién ganó.</p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <a href={enlacePublico} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>
@@ -351,7 +351,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       {/* Mensaje sin disponibles */}
       {filtro === 'disponibles' && disponiblesFiltrados.length === 0 && !busqueda && (
         <div className="info-box" style={{ marginBottom: 16, textAlign: 'center' }}>
-          🎟️ <b>¡Todo vendido!</b> No quedan números disponibles en esta rifa.
+          ️ <b>¡Todo vendido!</b> No quedan números disponibles en esta rifa.
         </div>
       )}
 
