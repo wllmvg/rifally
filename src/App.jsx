@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import CrearRifa from './pages/CrearRifa';
 import VistaRifa from './pages/VistaRifa';
 import VistaPublica from './pages/VistaPublica';
+import Landing from './pages/Landing';
 import { TicketIcon, LogOutIcon } from './components/Icons';
 
 function useUser() {
@@ -30,17 +31,17 @@ function PaginaPublica({ user }) {
   return (
     <>
       <nav className="nav">
-        <span className="nav-logo">
+        <span className="nav-logo" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
           <TicketIcon size={20} color="var(--accent)" />
           Rifally
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {user ? (
-            <button className="btn-ghost" onClick={() => navigate('/')} style={{ fontSize: 13 }}>
+            <button className="btn-ghost" onClick={() => navigate('/app')} style={{ fontSize: 13 }}>
               ← Mi cuenta
             </button>
           ) : (
-            <button className="btn-primary btn-icon-label" onClick={() => navigate('/')} style={{ fontSize: 13 }}>
+            <button className="btn-primary btn-icon-label" onClick={() => navigate('/app')} style={{ fontSize: 13 }}>
               <TicketIcon size={14} color="#fff" />
               Crea tu rifa ahora
             </button>
@@ -62,7 +63,7 @@ function AppAutenticada({ user }) {
   return (
     <>
       <nav className="nav">
-        <span className="nav-logo" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+        <span className="nav-logo" style={{ cursor: 'pointer' }} onClick={() => navigate('/app')}>
           <TicketIcon size={20} color="var(--accent)" />
           Rifally
         </span>
@@ -76,15 +77,15 @@ function AppAutenticada({ user }) {
         <Route path="/" element={
           <Dashboard
             user={user}
-            onSelectRifa={id => navigate(`/gestionar/${id}`)}
-            onCrearRifa={() => navigate('/crear')}
+            onSelectRifa={id => navigate(`/app/gestionar/${id}`)}
+            onCrearRifa={() => navigate('/app/crear')}
             toast={showToast}
           />
         } />
         <Route path="/crear" element={
           <CrearRifa
             user={user}
-            onCreada={id => navigate(`/gestionar/${id}`)}
+            onCreada={id => navigate(`/app/gestionar/${id}`)}
             onBack={() => navigate(-1)}
             toast={showToast}
           />
@@ -92,7 +93,7 @@ function AppAutenticada({ user }) {
         <Route path="/gestionar/:id" element={
           <VistaRifaWrapper user={user} toast={showToast} />
         } />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/app" replace />} />
       </Routes>
       {toastEl}
     </>
@@ -120,12 +121,14 @@ function Root() {
 
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
       <Route path="/rifa/:id" element={<PaginaPublica user={user} />} />
       {!user ? (
-        <Route path="*" element={<AuthWrapper />} />
+        <Route path="/app/*" element={<AuthWrapper />} />
       ) : (
-        <Route path="*" element={<AppAutenticada user={user} />} />
+        <Route path="/app/*" element={<AppAutenticada user={user} />} />
       )}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
