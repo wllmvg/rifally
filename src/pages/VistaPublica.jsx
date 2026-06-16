@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { sb } from '../lib/supabaseClient';
 import NumeroGrid from '../components/NumeroGrid';
-import { TrophyIcon, CelebrationIcon } from '../components/Icons';
+import { TrophyIcon } from '../components/Icons';
 
 function Podio({ ganadores }) {
   if (!ganadores.length) return null;
@@ -30,10 +30,7 @@ function Podio({ ganadores }) {
           <div className={`podio-avatar ${tipo}`}>{emoji}</div>
           <div className="podio-name">{g.nombre}</div>
           <div className="podio-num">#{g.numero}</div>
-          <div
-            className={`podio-block ${tipo}`}
-            style={{ height: alturas[tipo], background: colores[tipo] }}
-          >
+          <div className={`podio-block ${tipo}`} style={{ height: alturas[tipo], background: colores[tipo] }}>
             {label}
           </div>
         </div>
@@ -42,7 +39,6 @@ function Podio({ ganadores }) {
   );
 }
 
-// En vista pública: solo muestra si está apartado o disponible, sin nombre
 function ModalVerNumeroPublico({ numero, onClose }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -82,6 +78,7 @@ function ModalVerNumeroPublico({ numero, onClose }) {
 export default function VistaPublica({ rifaId, user }) {
   const [rifa, setRifa] = useState(null);
   const [numeros, setNumeros] = useState([]);
+  const [organizador, setOrganizador] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalVerNumero, setModalVerNumero] = useState(null);
 
@@ -89,13 +86,20 @@ export default function VistaPublica({ rifaId, user }) {
     (async () => {
       const { data: r } = await sb.from('rifas').select('*').eq('id', rifaId).single();
       const { data: n } = await sb.from('numeros').select('*').eq('rifa_id', rifaId).order('numero');
+
       setRifa(r);
-      // Ocultar nombres y teléfonos: solo exponer apartado/disponible y ganador
-      setNumeros((n || []).map(num => ({
-        ...num,
-        nombre: null,
-        telefono: null,
-      })));
+      setNumeros((n || []).map(num => ({ ...num, nombre: null, telefono: null })));
+
+      // Buscar nombre del organizador en profiles
+      if (r?.creador_id) {
+        const { data: perfil } = await sb
+          .from('profiles')
+          .select('name, email')
+          .eq('id', r.creador_id)
+          .maybeSingle();
+        setOrganizador(perfil || null);
+      }
+
       setLoading(false);
     })();
   }, [rifaId]);
@@ -103,10 +107,12 @@ export default function VistaPublica({ rifaId, user }) {
   if (loading) return <div className="page"><div className="spinner"></div></div>;
   if (!rifa) return <div className="page"><p>Rifa no encontrada</p></div>;
 
-  const ganadores = (numeros).filter(n => n.ganador);
+  const ganadores = numeros.filter(n => n.ganador);
   const totalApartados = numeros.filter(n => n.apartado).length;
   const totalDisponibles = numeros.length - totalApartados;
   const pct = Math.round((totalApartados / numeros.length) * 100) || 0;
+
+  const nombreOrganizador = organizador?.name || organizador?.email?.split('@')[0] || 'Organizador';
 
   const motivosRegiro = (() => {
     try { return rifa.motivos_regiro ? JSON.parse(rifa.motivos_regiro) : null; }
@@ -116,11 +122,8 @@ export default function VistaPublica({ rifaId, user }) {
   return (
     <div className="page" style={{ maxWidth: 720 }}>
 
-      {/* Hero */}
+      {/* Hero — sin SVG */}
       <div className="publico-hero">
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-          <CelebrationIcon size={44} color="rgba(255,255,255,0.9)" />
-        </div>
         <h1>{rifa.nombre}</h1>
         <p style={{ marginTop: 6 }}>
           Premio: <b style={{ fontSize: 17 }}>{rifa.premio}</b>
@@ -128,7 +131,10 @@ export default function VistaPublica({ rifaId, user }) {
         {rifa.precio && (
           <p style={{ marginTop: 4, fontSize: 14, opacity: 0.8 }}>${rifa.precio} por número</p>
         )}
-        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 20, fontSize: 14, opacity: 0.85 }}>
+        <p style={{ marginTop: 8, fontSize: 13, opacity: 0.75 }}>
+          Organizado por <b style={{ opacity: 1 }}>{nombreOrganizador}</b>
+        </p>
+        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 20, fontSize: 14, opacity: 0.85, flexWrap: 'wrap' }}>
           <span>️ {numeros.length} números</span>
           <span> {totalApartados} apartados</span>
           <span> {totalDisponibles} disponibles</span>
@@ -150,6 +156,10 @@ export default function VistaPublica({ rifaId, user }) {
               <p style={{ fontWeight: 600, marginTop: 2 }}>${Number(rifa.precio).toLocaleString('es-CO')}</p>
             </div>
           )}
+          <div>
+            <span style={{ color: 'var(--text3)' }}>Organizador</span>
+            <p style={{ fontWeight: 600, marginTop: 2 }}> {nombreOrganizador}</p>
+          </div>
           <div>
             <span style={{ color: 'var(--text3)' }}>Total de números</span>
             <p style={{ fontWeight: 600, marginTop: 2 }}>{numeros.length}</p>
@@ -177,8 +187,6 @@ export default function VistaPublica({ rifaId, user }) {
             <p style={{ fontWeight: 600, marginTop: 2, color: 'var(--accent)' }}>{pct}% vendido</p>
           </div>
         </div>
-
-        {/* Barra de progreso dentro de la descripción */}
         <div className="progress-bar" style={{ marginTop: 16, marginBottom: 0 }}>
           <div className="progress-fill" style={{ width: `${pct}%` }}></div>
         </div>
@@ -215,7 +223,6 @@ export default function VistaPublica({ rifaId, user }) {
         </p>
       </div>
 
-      {/* Leyenda */}
       <div className="leyenda-row" style={{ marginBottom: 12 }}>
         <span><span className="leyenda-dot" style={{ background: 'var(--surface)', border: '1.5px solid var(--border)' }}></span>Disponible</span>
         <span><span className="leyenda-dot" style={{ background: 'var(--accent)' }}></span>Apartado</span>

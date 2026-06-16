@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { sb } from './lib/supabaseClient';
 import { useToast } from './hooks/useToast';
 import Auth from './pages/Auth';
@@ -8,66 +9,60 @@ import VistaRifa from './pages/VistaRifa';
 import VistaPublica from './pages/VistaPublica';
 import { TicketIcon, LogOutIcon } from './components/Icons';
 
-export default function App() {
+function useUser() {
   const [user, setUser] = useState(undefined);
-  const [pantalla, setPantalla] = useState('dashboard');
-  const [rifaActiva, setRifaActiva] = useState(null);
-  const [showToast, toastEl] = useToast();
-
-  const params = new URLSearchParams(window.location.search);
-  const rifaPublicaId = params.get('rifa') && params.get('publico') === '1' ? params.get('rifa') : null;
-
   useEffect(() => {
-    sb.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-    const { data: listener } = sb.auth.onAuthStateChange((_event, session) => {
+    sb.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: listener } = sb.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
     });
     return () => listener.subscription.unsubscribe();
   }, []);
+  return user;
+}
 
-  // Vista pública
-  if (rifaPublicaId) {
-    return (
-      <>
-        <nav className="nav">
-          <span className="nav-logo">
-            <TicketIcon size={20} color="var(--accent)" />
-            Rifally
-          </span>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {user ? (
-              <button className="btn-ghost" onClick={() => window.location.href = window.location.pathname}
-                style={{ fontSize: 13 }}>
-                ← Mi cuenta
-              </button>
-            ) : (
-              /* Botón "Crea tu rifa ahora" si no hay sesión */
-              <a href={window.location.pathname} style={{ textDecoration: 'none' }}>
-                <button className="btn-primary btn-icon-label" style={{ fontSize: 13 }}>
-                  <TicketIcon size={14} color="#fff" />
-                  Crea tu rifa ahora
-                </button>
-              </a>
-            )}
-          </div>
-        </nav>
-        <VistaPublica rifaId={rifaPublicaId} user={user} />
-        {toastEl}
-      </>
-    );
-  }
-
-  if (user === undefined) return <div className="page"><div className="spinner"></div></div>;
-  if (!user) return <><Auth toast={showToast} />{toastEl}</>;
-
-  const logout = async () => { await sb.auth.signOut(); };
+// ── Vista pública (/rifa/:id) ──────────────────────────────
+function PaginaPublica({ user }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [showToast, toastEl] = useToast();
 
   return (
     <>
       <nav className="nav">
-        <span className="nav-logo" style={{ cursor: 'pointer' }} onClick={() => setPantalla('dashboard')}>
+        <span className="nav-logo">
+          <TicketIcon size={20} color="var(--accent)" />
+          Rifally
+        </span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {user ? (
+            <button className="btn-ghost" onClick={() => navigate('/')} style={{ fontSize: 13 }}>
+              ← Mi cuenta
+            </button>
+          ) : (
+            <button className="btn-primary btn-icon-label" onClick={() => navigate('/')} style={{ fontSize: 13 }}>
+              <TicketIcon size={14} color="#fff" />
+              Crea tu rifa ahora
+            </button>
+          )}
+        </div>
+      </nav>
+      <VistaPublica rifaId={id} user={user} toast={showToast} />
+      {toastEl}
+    </>
+  );
+}
+
+// ── App autenticada ────────────────────────────────────────
+function AppAutenticada({ user }) {
+  const navigate = useNavigate();
+  const [showToast, toastEl] = useToast();
+  const logout = async () => { await sb.auth.signOut(); navigate('/'); };
+
+  return (
+    <>
+      <nav className="nav">
+        <span className="nav-logo" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
           <TicketIcon size={20} color="var(--accent)" />
           Rifally
         </span>
@@ -77,18 +72,73 @@ export default function App() {
         </button>
       </nav>
 
-      {pantalla === 'dashboard' && (
-        <Dashboard user={user} onSelectRifa={id => { setRifaActiva(id); setPantalla('rifa'); }}
-          onCrearRifa={() => setPantalla('crear')} toast={showToast} />
-      )}
-      {pantalla === 'crear' && (
-        <CrearRifa user={user} onCreada={id => { setRifaActiva(id); setPantalla('rifa'); }}
-          onBack={() => setPantalla('dashboard')} toast={showToast} />
-      )}
-      {pantalla === 'rifa' && (
-        <VistaRifa rifaId={rifaActiva} user={user} onBack={() => setPantalla('dashboard')} toast={showToast} />
-      )}
+      <Routes>
+        <Route path="/" element={
+          <Dashboard
+            user={user}
+            onSelectRifa={id => navigate(`/gestionar/${id}`)}
+            onCrearRifa={() => navigate('/crear')}
+            toast={showToast}
+          />
+        } />
+        <Route path="/crear" element={
+          <CrearRifa
+            user={user}
+            onCreada={id => navigate(`/gestionar/${id}`)}
+            onBack={() => navigate(-1)}
+            toast={showToast}
+          />
+        } />
+        <Route path="/gestionar/:id" element={
+          <VistaRifaWrapper user={user} toast={showToast} />
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       {toastEl}
     </>
+  );
+}
+
+function VistaRifaWrapper({ user, toast }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  return (
+    <VistaRifa
+      rifaId={id}
+      user={user}
+      onBack={() => navigate(-1)}
+      toast={toast}
+    />
+  );
+}
+
+// ── Root ───────────────────────────────────────────────────
+function Root() {
+  const user = useUser();
+
+  if (user === undefined) return <div className="page"><div className="spinner"></div></div>;
+
+  return (
+    <Routes>
+      <Route path="/rifa/:id" element={<PaginaPublica user={user} />} />
+      {!user ? (
+        <Route path="*" element={<AuthWrapper />} />
+      ) : (
+        <Route path="*" element={<AppAutenticada user={user} />} />
+      )}
+    </Routes>
+  );
+}
+
+function AuthWrapper() {
+  const [showToast, toastEl] = useToast();
+  return <><Auth toast={showToast} />{toastEl}</>;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Root />
+    </BrowserRouter>
   );
 }

@@ -185,7 +185,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
   };
 
   const copiarEnlace = () => {
-    const url = `${window.location.href.split('?')[0]}?rifa=${rifaId}&publico=1`;
+    const url = `${window.location.origin}/rifa/${rifaId}`;
     navigator.clipboard.writeText(url).then(() => toast('Enlace copiado', 'success'));
   };
 
@@ -216,7 +216,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
 
   const fechaCreacion = formatDate(rifa.created_at);
   const fechaCierre = formatDate(rifa.fecha_cierre);
-  const enlacePublico = `${window.location.href.split('?')[0]}?rifa=${rifaId}&publico=1`;
+  const enlacePublico = `${window.location.origin}/rifa/${rifaId}`;
 
   return (
     <div className="page">
