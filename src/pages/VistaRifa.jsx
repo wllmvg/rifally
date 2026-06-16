@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
+import Portal from '../components/Portal';
 import { sb } from '../lib/supabaseClient';
 import NumeroGrid from '../components/NumeroGrid';
 import ModalNumero from '../components/modals/ModalNumero';
 import ModalRuleta from '../components/modals/ModalRuleta';
 import ModalColaboradores from '../components/modals/ModalColaboradores';
 import { ArrowLeftIcon, TargetIcon, UsersIcon, LinkIcon, TrophyIcon, CalendarIcon, ClockIcon, SearchIcon, ShareIcon } from '../components/Icons';
-
+ 
 function formatDate(iso) {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-
+ 
 // Podium component for winners
 function Podio({ ganadores }) {
   if (!ganadores.length) return null;
@@ -18,7 +19,7 @@ function Podio({ ganadores }) {
   const tipos = ['gold', 'silver', 'bronze'];
   const emojis = ['', '', ''];
   const alturas = ['podio-block gold', 'podio-block silver', 'podio-block bronze'];
-
+ 
   // Reorder for podium display: 2nd, 1st, 3rd
   const orden = ganadores.length === 1
     ? [{ g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] }]
@@ -32,7 +33,7 @@ function Podio({ ganadores }) {
         { g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] },
         { g: tercero, tipo: 'bronze', emoji: '', bloque: alturas[2] },
       ];
-
+ 
   return (
     <div className="podio-container">
       {orden.map(({ g, tipo, emoji, bloque }, i) => (
@@ -48,7 +49,7 @@ function Podio({ ganadores }) {
     </div>
   );
 }
-
+ 
 // Modal to view booked numbers
 function ModalNumerosApartados({ numeros, onClose, onClickNumero, puedeEditar, rifa }) {
   const [busq, setBusq] = useState('');
@@ -56,8 +57,9 @@ function ModalNumerosApartados({ numeros, onClose, onClickNumero, puedeEditar, r
     const q = busq.toLowerCase();
     return !q || String(n.numero).includes(q) || (n.nombre || '').toLowerCase().includes(q) || (n.telefono || '').includes(q);
   });
-
+ 
   return (
+    <Portal>
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal modal-numeros-apartados" style={{ maxWidth: 560 }}>
         <div className="modal-header">
@@ -103,12 +105,14 @@ function ModalNumerosApartados({ numeros, onClose, onClickNumero, puedeEditar, r
         )}
       </div>
     </div>
+    </Portal>
   );
 }
-
+ 
 // Modal to view a single number info (read-only click on grid)
 function ModalVerNumero({ numero, onClose }) {
   return (
+    <Portal>
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 320, textAlign: 'center' }}>
         <div className="modal-header" style={{ justifyContent: 'flex-end', marginBottom: 0 }}>
@@ -133,9 +137,10 @@ function ModalVerNumero({ numero, onClose }) {
         </button>
       </div>
     </div>
+    </Portal>
   );
 }
-
+ 
 export default function VistaRifa({ rifaId, user, onBack, toast }) {
   const [rifa, setRifa] = useState(null);
   const [numeros, setNumeros] = useState([]);
@@ -148,7 +153,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
   const [esColaborador, setEsColaborador] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('todos');
-
+ 
   const cargar = useCallback(async () => {
     const { data: r } = await sb.from('rifas').select('*').eq('id', rifaId).single();
     const { data: n } = await sb.from('numeros').select('*').eq('rifa_id', rifaId).order('numero');
@@ -161,9 +166,9 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       setEsColaborador(!!colab);
     }
   }, [rifaId, user]);
-
+ 
   useEffect(() => { cargar(); }, [cargar]);
-
+ 
   const handleSaveNumero = async (numero, nombre, telefono) => {
     const { error } = await sb.from('numeros')
       .update({ apartado: true, nombre, telefono, apartado_at: new Date().toISOString() })
@@ -173,7 +178,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
     setModalNum(null);
     cargar();
   };
-
+ 
   const handleDeleteNumero = async (numero) => {
     const { error } = await sb.from('numeros')
       .update({ apartado: false, nombre: null, telefono: null, apartado_at: null })
@@ -183,26 +188,26 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
     setModalNum(null);
     cargar();
   };
-
+ 
   const copiarEnlace = () => {
     const url = `${window.location.origin}/rifa/${rifaId}`;
     navigator.clipboard.writeText(url).then(() => toast('Enlace copiado', 'success'));
   };
-
+ 
   if (loading) return <div className="page"><div className="spinner"></div></div>;
   if (!rifa) return <div className="page"><p>Rifa no encontrada</p></div>;
-
+ 
   const esCreador = user && rifa.creador_id === user.id;
   const puedeEditar = esCreador || esColaborador;
   const totalApartados = numeros.filter(n => n.apartado).length;
   const pct = Math.round((totalApartados / numeros.length) * 100) || 0;
   const ganadores = numeros.filter(n => n.ganador);
-
+ 
   const motivosRegiro = (() => {
     try { return rifa.motivos_regiro ? JSON.parse(rifa.motivos_regiro) : null; }
     catch { return null; }
   })();
-
+ 
   const numerosFiltrados = numeros.filter(n => {
     const q = busqueda.toLowerCase();
     const matchBusq = !q || String(n.numero).includes(q) || (n.nombre || '').toLowerCase().includes(q);
@@ -211,13 +216,13 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       || (filtro === 'apartados' && n.apartado);
     return matchBusq && matchFiltro;
   });
-
+ 
   const disponiblesFiltrados = filtro === 'disponibles' ? numerosFiltrados.filter(n => !n.apartado) : [];
-
+ 
   const fechaCreacion = formatDate(rifa.created_at);
   const fechaCierre = formatDate(rifa.fecha_cierre);
   const enlacePublico = `${window.location.origin}/rifa/${rifaId}`;
-
+ 
   return (
     <div className="page">
       {/* Header */}
@@ -251,7 +256,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           <ArrowLeftIcon size={16} color="#fff" /> Volver
         </button>
       </div>
-
+ 
       {/* Podio de ganadores si rifa finalizada */}
       {rifa.estado === 'finalizada' && ganadores.length > 0 && (
         <div className="ganadores-banner">
@@ -274,7 +279,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           )}
         </div>
       )}
-
+ 
       {/* Banner compartir (rifa finalizada) */}
       {rifa.estado === 'finalizada' && (
         <div className="share-banner">
@@ -293,7 +298,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           </div>
         </div>
       )}
-
+ 
       {/* Stats */}
       <div className="stats-grid">
         {[
@@ -311,7 +316,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       <div className="progress-bar" style={{ marginBottom: 24 }}>
         <div className="progress-fill" style={{ width: `${pct}%` }}></div>
       </div>
-
+ 
       {/* Acciones creador */}
       {esCreador && rifa.estado !== 'finalizada' && (
         <div className="acciones-row">
@@ -333,7 +338,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       {esColaborador && (
         <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>Eres colaborador de esta rifa</p>
       )}
-
+ 
       {/* Filtros */}
       <div className="filtros-row">
         <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
@@ -347,14 +352,14 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           ))}
         </div>
       </div>
-
+ 
       {/* Mensaje sin disponibles */}
       {filtro === 'disponibles' && disponiblesFiltrados.length === 0 && !busqueda && (
         <div className="info-box" style={{ marginBottom: 16, textAlign: 'center' }}>
           ️ <b>¡Todo vendido!</b> No quedan números disponibles en esta rifa.
         </div>
       )}
-
+ 
       {/* Leyenda */}
       <div className="leyenda-row">
         <span><span className="leyenda-dot" style={{ background: 'var(--surface)', border: '1.5px solid var(--border)' }}></span>Disponible</span>
@@ -363,7 +368,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           <span><span className="leyenda-dot" style={{ background: 'var(--gold)' }}></span>Ganador</span>
         )}
       </div>
-
+ 
       {/* Grid */}
       <div className="card">
         <NumeroGrid
@@ -379,7 +384,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           soloVer={false}
         />
       </div>
-
+ 
       {/* Números apartados — en modal */}
       {totalApartados > 0 && (
         <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
@@ -389,7 +394,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           </button>
         </div>
       )}
-
+ 
       {/* Modales */}
       {modalNum && (
         <ModalNumero numero={modalNum} onClose={() => setModalNum(null)}
