@@ -18,13 +18,25 @@ export default function Auth({ toast }) {
       const { error } = await sb.auth.signInWithPassword({ email, password: pass });
       if (error) toast('Credenciales incorrectas');
     } else {
-      const { error } = await sb.auth.signUp({
+      const { data: signUpData, error } = await sb.auth.signUp({
         email,
         password: pass,
         options: { data: { nombre: nombre.trim() } },
       });
-      if (error) toast(error.message);
-      else { setEnviado(true); toast('¡Cuenta creada! Revisa tu correo para confirmar.'); }
+      if (error) {
+        toast(error.message);
+      } else {
+        // Guardar nombre en profiles para que sea visible públicamente
+        if (signUpData?.user?.id) {
+          await sb.from('profiles').upsert({
+            id: signUpData.user.id,
+            email: email.toLowerCase(),
+            name: nombre.trim(),
+          }, { onConflict: 'id' });
+        }
+        setEnviado(true);
+        toast('¡Cuenta creada! Revisa tu correo para confirmar.');
+      }
     }
     setLoading(false);
   };

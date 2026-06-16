@@ -1,42 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
-import Portal from '../components/Portal';
 import { sb } from '../lib/supabaseClient';
+import Portal from '../components/Portal';
 import NumeroGrid from '../components/NumeroGrid';
 import ModalNumero from '../components/modals/ModalNumero';
 import ModalRuleta from '../components/modals/ModalRuleta';
 import ModalColaboradores from '../components/modals/ModalColaboradores';
-import { ArrowLeftIcon, TargetIcon, UsersIcon, LinkIcon, TrophyIcon, CalendarIcon, ClockIcon, SearchIcon, ShareIcon } from '../components/Icons';
- 
+import { ArrowLeftIcon, TargetIcon, UsersIcon, LinkIcon, TrophyIcon, CalendarIcon, ClockIcon, SearchIcon, ShareIcon, PencilIcon, GiftIcon, MoneyIcon, CloseIcon } from '../components/Icons';
+
 function formatDate(iso) {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
- 
-// Podium component for winners
+
+// ── Podio ────────────────────────────────────────────────────────
 function Podio({ ganadores }) {
   if (!ganadores.length) return null;
   const [primero, segundo, tercero] = ganadores;
-  const tipos = ['gold', 'silver', 'bronze'];
-  const emojis = ['', '', ''];
   const alturas = ['podio-block gold', 'podio-block silver', 'podio-block bronze'];
- 
-  // Reorder for podium display: 2nd, 1st, 3rd
   const orden = ganadores.length === 1
-    ? [{ g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] }]
+    ? [{ g: primero, tipo: 'gold', emoji: '🥇', bloque: alturas[0] }]
     : ganadores.length === 2
     ? [
-        { g: segundo, tipo: 'silver', emoji: '', bloque: alturas[1] },
-        { g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] },
+        { g: segundo, tipo: 'silver', emoji: '🥈', bloque: alturas[1] },
+        { g: primero, tipo: 'gold',   emoji: '🥇', bloque: alturas[0] },
       ]
     : [
-        { g: segundo, tipo: 'silver', emoji: '', bloque: alturas[1] },
-        { g: primero, tipo: 'gold', emoji: '', bloque: alturas[0] },
-        { g: tercero, tipo: 'bronze', emoji: '', bloque: alturas[2] },
+        { g: segundo,  tipo: 'silver', emoji: '🥈', bloque: alturas[1] },
+        { g: primero,  tipo: 'gold',   emoji: '🥇', bloque: alturas[0] },
+        { g: tercero,  tipo: 'bronze', emoji: '🥉', bloque: alturas[2] },
       ];
- 
   return (
     <div className="podio-container">
-      {orden.map(({ g, tipo, emoji, bloque }, i) => (
+      {orden.map(({ g, tipo, emoji, bloque }) => (
         <div key={g.id} className="podio-slot">
           <div className={`podio-avatar ${tipo}`}>{emoji}</div>
           <div className="podio-name">{g.nombre}</div>
@@ -49,116 +44,229 @@ function Podio({ ganadores }) {
     </div>
   );
 }
- 
-// Modal to view booked numbers
-function ModalNumerosApartados({ numeros, onClose, onClickNumero, puedeEditar, rifa }) {
+
+// ── Modal editar rifa (solo creador) ─────────────────────────────
+function ModalEditarRifa({ rifa, onClose, onGuardado, toast }) {
+  const [nombre, setNombre]       = useState(rifa.nombre || '');
+  const [premio, setPremio]       = useState(rifa.premio || '');
+  const [precio, setPrecio]       = useState(rifa.precio ?? '');
+  const [fechaCierre, setFecha]   = useState(rifa.fecha_cierre ? rifa.fecha_cierre.slice(0, 10) : '');
+  const [loading, setLoading]     = useState(false);
+
+  const guardar = async () => {
+    if (!nombre.trim()) { toast('El nombre no puede estar vacío', 'error'); return; }
+    if (!premio.trim()) { toast('El premio no puede estar vacío', 'error'); return; }
+    setLoading(true);
+    const { error } = await sb.from('rifas').update({
+      nombre:      nombre.trim(),
+      premio:      premio.trim(),
+      precio:      precio !== '' ? Number(precio) : null,
+      fecha_cierre: fechaCierre || null,
+    }).eq('id', rifa.id);
+    setLoading(false);
+    if (error) { toast('Error al guardar', 'error'); return; }
+    toast('Rifa actualizada', 'success');
+    onGuardado();
+    onClose();
+  };
+
+  return (
+    <Portal>
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="modal" style={{ maxWidth: 480 }}>
+          <div className="modal-header">
+            <h3>Editar rifa</h3>
+            <button className="btn-ghost btn-icon-only" onClick={onClose}><CloseIcon size={18} /></button>
+          </div>
+
+          <div className="field">
+            <label>Nombre de la rifa *</label>
+            <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Rifa de navidad" disabled={loading} />
+          </div>
+          <div className="field">
+            <label>Premio *</label>
+            <input value={premio} onChange={e => setPremio(e.target.value)} placeholder="Ej: TV 55 pulgadas" disabled={loading} />
+          </div>
+          <div className="field">
+            <label>Precio por número ($)</label>
+            <input type="number" min={0} value={precio} onChange={e => setPrecio(e.target.value)} placeholder="Opcional" disabled={loading} />
+          </div>
+          <div className="field">
+            <label>Fecha tentativa de cierre</label>
+            <input type="date" value={fechaCierre} onChange={e => setFecha(e.target.value)} disabled={loading} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+            <button className="btn-primary" onClick={guardar} disabled={loading} style={{ flex: 1 }}>
+              {loading ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+            <button className="btn-secondary" onClick={onClose} disabled={loading}>Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
+// ── Modal números apartados ──────────────────────────────────────
+function ModalNumerosApartados({ numeros, onClose, onClickNumero, puedeEditar, rifa, userId }) {
   const [busq, setBusq] = useState('');
   const lista = numeros.filter(n => {
     const q = busq.toLowerCase();
     return !q || String(n.numero).includes(q) || (n.nombre || '').toLowerCase().includes(q) || (n.telefono || '').includes(q);
   });
- 
+
   return (
     <Portal>
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal modal-numeros-apartados" style={{ maxWidth: 560 }}>
-        <div className="modal-header">
-          <h3>Números apartados <span style={{ color: 'var(--text3)', fontWeight: 400, fontSize: 14 }}>({numeros.length})</span></h3>
-          <button className="btn-ghost btn-icon-only" onClick={onClose}>✕</button>
-        </div>
-        <div className="search-apartados">
-          <SearchIcon size={15} color="var(--text3)" />
-          <div className="search-icon-inside"><SearchIcon size={15} /></div>
-          <input
-            value={busq}
-            onChange={e => setBusq(e.target.value)}
-            placeholder="Buscar por nombre o teléfono…"
-            autoFocus
-          />
-        </div>
-        {lista.length === 0 ? (
-          <p style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
-            No se encontraron resultados
-          </p>
-        ) : (
-          <div style={{ display: 'grid', gap: 8, maxHeight: 400, overflowY: 'auto' }}>
-            {lista.map(n => (
-              <div
-                key={n.id}
-                onClick={() => puedeEditar && rifa?.estado !== 'finalizada' && onClickNumero(n)}
-                className="apartado-row"
-                style={{ cursor: puedeEditar && rifa?.estado !== 'finalizada' ? 'pointer' : 'default' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span className="apartado-num" style={{ background: n.ganador ? 'var(--gold)' : 'var(--accent)' }}>
-                    #{n.numero}
-                  </span>
-                  <div>
-                    <p style={{ fontWeight: 500, fontSize: 14 }}>{n.nombre}</p>
-                    {n.telefono && <p style={{ color: 'var(--text3)', fontSize: 12 }}>{n.telefono}</p>}
-                  </div>
-                  {n.ganador && <span className="badge badge-gold"><TrophyIcon size={11} /> Ganador</span>}
-                </div>
-              </div>
-            ))}
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="modal modal-numeros-apartados" style={{ maxWidth: 560 }}>
+          <div className="modal-header">
+            <h3>Números apartados <span style={{ color: 'var(--text3)', fontWeight: 400, fontSize: 14 }}>({numeros.length})</span></h3>
+            <button className="btn-ghost btn-icon-only" onClick={onClose}>✕</button>
           </div>
-        )}
+          <div className="search-apartados">
+            <div className="search-icon-inside"><SearchIcon size={15} /></div>
+            <input
+              value={busq}
+              onChange={e => setBusq(e.target.value)}
+              placeholder="Buscar por nombre o teléfono…"
+              autoFocus
+            />
+          </div>
+          {lista.length === 0 ? (
+            <p style={{ color: 'var(--text3)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+              No se encontraron resultados
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gap: 8, maxHeight: 400, overflowY: 'auto' }}>
+              {lista.map(n => {
+                // El creador no puede editar lo que apartó un colaborador
+                const puedeEditarEste = puedeEditar && rifa?.estado !== 'finalizada'
+                  && !(n.apartado_por && n.apartado_por !== userId);
+                return (
+                  <div
+                    key={n.id}
+                    onClick={() => puedeEditarEste && onClickNumero(n)}
+                    className="apartado-row"
+                    style={{ cursor: puedeEditarEste ? 'pointer' : 'default', opacity: (!puedeEditar || n.apartado_por && n.apartado_por !== userId) && puedeEditar ? 0.7 : 1 }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className="apartado-num" style={{ background: n.ganador ? 'var(--gold)' : 'var(--accent)' }}>
+                        #{n.numero}
+                      </span>
+                      <div>
+                        <p style={{ fontWeight: 500, fontSize: 14 }}>{n.nombre}</p>
+                        {n.telefono && <p style={{ color: 'var(--text3)', fontSize: 12 }}>{n.telefono}</p>}
+                        {n.apartado_por_nombre && (
+                          <p style={{ color: 'var(--accent)', fontSize: 11, marginTop: 2 }}>
+                            ✦ Apartado por {n.apartado_por_nombre}
+                          </p>
+                        )}
+                      </div>
+                      {n.ganador && <span className="badge badge-gold"><TrophyIcon size={11} /> Ganador</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </Portal>
   );
 }
- 
-// Modal to view a single number info (read-only click on grid)
+
+// ── Modal ver número (solo lectura) ─────────────────────────────
 function ModalVerNumero({ numero, onClose }) {
   return (
     <Portal>
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 320, textAlign: 'center' }}>
-        <div className="modal-header" style={{ justifyContent: 'flex-end', marginBottom: 0 }}>
-          <button className="btn-ghost btn-icon-only" onClick={onClose}>✕</button>
-        </div>
-        <div className="numero-detail-big">{numero.numero}</div>
-        {numero.ganador && (
-          <div style={{ marginBottom: 12 }}>
-            <span className="badge badge-gold"><TrophyIcon size={12} /> Ganador</span>
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="modal" style={{ maxWidth: 320, textAlign: 'center' }}>
+          <div className="modal-header" style={{ justifyContent: 'flex-end', marginBottom: 0 }}>
+            <button className="btn-ghost btn-icon-only" onClick={onClose}>✕</button>
           </div>
-        )}
-        {numero.apartado ? (
-          <>
-            <p style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{numero.nombre}</p>
-            <p style={{ color: 'var(--text2)', fontSize: 14 }}>{numero.telefono || 'Sin teléfono'}</p>
-          </>
-        ) : (
-          <p style={{ color: 'var(--text2)', fontSize: 15 }}>Número disponible</p>
-        )}
-        <button className="btn-secondary" onClick={onClose} style={{ marginTop: 20, width: '100%' }}>
-          Cerrar
-        </button>
+          <div className="numero-detail-big">{numero.numero}</div>
+          {numero.ganador && (
+            <div style={{ marginBottom: 12 }}>
+              <span className="badge badge-gold"><TrophyIcon size={12} /> Ganador</span>
+            </div>
+          )}
+          {numero.apartado ? (
+            <>
+              <p style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{numero.nombre}</p>
+              <p style={{ color: 'var(--text2)', fontSize: 14 }}>{numero.telefono || 'Sin teléfono'}</p>
+              {numero.apartado_por_nombre && (
+                <p style={{ color: 'var(--accent)', fontSize: 12, marginTop: 6 }}>
+                  ✦ Apartado por {numero.apartado_por_nombre}
+                </p>
+              )}
+            </>
+          ) : (
+            <p style={{ color: 'var(--text2)', fontSize: 15 }}>Número disponible</p>
+          )}
+          <button className="btn-secondary" onClick={onClose} style={{ marginTop: 20, width: '100%' }}>
+            Cerrar
+          </button>
+        </div>
       </div>
-    </div>
     </Portal>
   );
 }
- 
+
+// ── Vista principal ──────────────────────────────────────────────
 export default function VistaRifa({ rifaId, user, onBack, toast }) {
-  const [rifa, setRifa] = useState(null);
-  const [numeros, setNumeros] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modalNum, setModalNum] = useState(null);
-  const [modalRuleta, setModalRuleta] = useState(false);
-  const [modalColab, setModalColab] = useState(false);
+  const [rifa, setRifa]                   = useState(null);
+  const [numeros, setNumeros]             = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [modalNum, setModalNum]           = useState(null);
+  const [modalRuleta, setModalRuleta]     = useState(false);
+  const [modalColab, setModalColab]       = useState(false);
   const [modalApartados, setModalApartados] = useState(false);
   const [modalVerNumero, setModalVerNumero] = useState(null);
+  const [modalEditar, setModalEditar]     = useState(false);
   const [esColaborador, setEsColaborador] = useState(false);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtro, setFiltro] = useState('todos');
- 
+  const [busqueda, setBusqueda]           = useState('');
+  const [filtro, setFiltro]               = useState('todos');
+  // Cache colaboradores nombre: { user_id -> nombre }
+  const [colabNombres, setColabNombres]   = useState({});
+
   const cargar = useCallback(async () => {
     const { data: r } = await sb.from('rifas').select('*').eq('id', rifaId).single();
     const { data: n } = await sb.from('numeros').select('*').eq('rifa_id', rifaId).order('numero');
     setRifa(r);
-    setNumeros(n || []);
+
+    // Obtener nombres de colaboradores para enriquecer los números
+    if (n && n.length > 0) {
+      const idsColabs = [...new Set(n.filter(x => x.apartado_por).map(x => x.apartado_por))];
+      if (idsColabs.length > 0) {
+        const { data: colabs } = await sb.from('colaboradores')
+          .select('email, nombre').eq('rifa_id', rifaId);
+        const { data: profiles } = await sb.from('profiles')
+          .select('id, name, email').in('id', idsColabs);
+        // Build map id -> nombre
+        const mapaId = {};
+        (profiles || []).forEach(p => {
+          mapaId[p.id] = p.name || p.email?.split('@')[0] || 'Colaborador';
+        });
+        // Also try matching by email from colaboradores table
+        const mapaEmail = {};
+        (colabs || []).forEach(c => { mapaEmail[c.email] = c.nombre; });
+        setColabNombres(mapaId);
+        // Enrich numeros with apartado_por_nombre
+        const numerosEnriquecidos = n.map(num => ({
+          ...num,
+          apartado_por_nombre: num.apartado_por
+            ? (mapaId[num.apartado_por] || null)
+            : null,
+        }));
+        setNumeros(numerosEnriquecidos);
+      } else {
+        setNumeros(n || []);
+      }
+    } else {
+      setNumeros(n || []);
+    }
+
     setLoading(false);
     if (r && user && r.creador_id !== user.id) {
       const { data: colab } = await sb.from('colaboradores')
@@ -166,48 +274,54 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       setEsColaborador(!!colab);
     }
   }, [rifaId, user]);
- 
+
   useEffect(() => { cargar(); }, [cargar]);
- 
+
   const handleSaveNumero = async (numero, nombre, telefono) => {
     const { error } = await sb.from('numeros')
-      .update({ apartado: true, nombre, telefono, apartado_at: new Date().toISOString() })
+      .update({
+        apartado: true,
+        nombre,
+        telefono,
+        apartado_at: new Date().toISOString(),
+        apartado_por: user?.id || null,
+      })
       .eq('rifa_id', rifaId).eq('numero', numero);
     if (error) { toast('Error al guardar', 'error'); return; }
     toast(`Número ${numero} apartado por ${nombre}`, 'success');
     setModalNum(null);
     cargar();
   };
- 
+
   const handleDeleteNumero = async (numero) => {
     const { error } = await sb.from('numeros')
-      .update({ apartado: false, nombre: null, telefono: null, apartado_at: null })
+      .update({ apartado: false, nombre: null, telefono: null, apartado_at: null, apartado_por: null })
       .eq('rifa_id', rifaId).eq('numero', numero);
     if (error) { toast('Error al liberar', 'error'); return; }
     toast(`Número ${numero} liberado`, 'success');
     setModalNum(null);
     cargar();
   };
- 
+
   const copiarEnlace = () => {
     const url = `${window.location.origin}/rifa/${rifaId}`;
     navigator.clipboard.writeText(url).then(() => toast('Enlace copiado', 'success'));
   };
- 
+
   if (loading) return <div className="page"><div className="spinner"></div></div>;
-  if (!rifa) return <div className="page"><p>Rifa no encontrada</p></div>;
- 
-  const esCreador = user && rifa.creador_id === user.id;
-  const puedeEditar = esCreador || esColaborador;
+  if (!rifa)   return <div className="page"><p>Rifa no encontrada</p></div>;
+
+  const esCreador      = user && rifa.creador_id === user.id;
+  const puedeEditar    = esCreador || esColaborador;
   const totalApartados = numeros.filter(n => n.apartado).length;
-  const pct = Math.round((totalApartados / numeros.length) * 100) || 0;
-  const ganadores = numeros.filter(n => n.ganador);
- 
+  const pct            = Math.round((totalApartados / numeros.length) * 100) || 0;
+  const ganadores      = numeros.filter(n => n.ganador);
+
   const motivosRegiro = (() => {
     try { return rifa.motivos_regiro ? JSON.parse(rifa.motivos_regiro) : null; }
     catch { return null; }
   })();
- 
+
   const numerosFiltrados = numeros.filter(n => {
     const q = busqueda.toLowerCase();
     const matchBusq = !q || String(n.numero).includes(q) || (n.nombre || '').toLowerCase().includes(q);
@@ -216,13 +330,13 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       || (filtro === 'apartados' && n.apartado);
     return matchBusq && matchFiltro;
   });
- 
+
   const disponiblesFiltrados = filtro === 'disponibles' ? numerosFiltrados.filter(n => !n.apartado) : [];
- 
+
   const fechaCreacion = formatDate(rifa.created_at);
-  const fechaCierre = formatDate(rifa.fecha_cierre);
+  const fechaCierre   = formatDate(rifa.fecha_cierre);
   const enlacePublico = `${window.location.origin}/rifa/${rifaId}`;
- 
+
   return (
     <div className="page">
       {/* Header */}
@@ -247,17 +361,23 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
             )}
           </div>
         </div>
-        {/* Botón Volver a la derecha, destacado */}
-        <button
-          className="btn-primary btn-icon-label"
-          onClick={onBack}
-          style={{ flexShrink: 0, alignSelf: 'flex-start' }}
-        >
-          <ArrowLeftIcon size={16} color="#fff" /> Volver
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'flex-start' }}>
+          {esCreador && rifa.estado !== 'finalizada' && (
+            <button
+              className="btn-secondary btn-icon-label"
+              onClick={() => setModalEditar(true)}
+              title="Editar rifa"
+            >
+              <PencilIcon size={15} /> Editar
+            </button>
+          )}
+          <button className="btn-primary btn-icon-label" onClick={onBack}>
+            <ArrowLeftIcon size={16} color="#fff" /> Volver
+          </button>
+        </div>
       </div>
- 
-      {/* Podio de ganadores si rifa finalizada */}
+
+      {/* Podio de ganadores */}
       {rifa.estado === 'finalizada' && ganadores.length > 0 && (
         <div className="ganadores-banner">
           <div className="ganadores-banner-title">
@@ -268,7 +388,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           {motivosRegiro && motivosRegiro.length > 0 && (
             <div style={{ marginTop: 16, textAlign: 'left', background: 'var(--warning-light)', border: '1px solid var(--warning)', borderRadius: 'var(--radius)', padding: '10px 14px' }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning)', marginBottom: 6 }}>
-                ️ Historial de regiros
+                ⚠️ Historial de regiros
               </p>
               {motivosRegiro.map((r, i) => (
                 <p key={i} style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 2 }}>
@@ -279,12 +399,12 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           )}
         </div>
       )}
- 
+
       {/* Banner compartir (rifa finalizada) */}
       {rifa.estado === 'finalizada' && (
         <div className="share-banner">
           <div>
-            <p> <b>¡Rifa finalizada!</b> Comparte el enlace para que todos sepan quién ganó.</p>
+            <p>🎉 <b>¡Rifa finalizada!</b> Comparte el enlace para que todos sepan quién ganó.</p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <a href={enlacePublico} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>
@@ -298,7 +418,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           </div>
         </div>
       )}
- 
+
       {/* Stats */}
       <div className="stats-grid">
         {[
@@ -316,7 +436,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
       <div className="progress-bar" style={{ marginBottom: 24 }}>
         <div className="progress-fill" style={{ width: `${pct}%` }}></div>
       </div>
- 
+
       {/* Acciones creador */}
       {esCreador && rifa.estado !== 'finalizada' && (
         <div className="acciones-row">
@@ -333,12 +453,10 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           </a>
         </div>
       )}
-      {/* Botón ver pública para rifa activa también (siempre visible para creador) */}
-      {esCreador && rifa.estado === 'finalizada' && null /* ya está en share-banner */}
       {esColaborador && (
         <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>Eres colaborador de esta rifa</p>
       )}
- 
+
       {/* Filtros */}
       <div className="filtros-row">
         <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
@@ -352,14 +470,13 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           ))}
         </div>
       </div>
- 
-      {/* Mensaje sin disponibles */}
+
       {filtro === 'disponibles' && disponiblesFiltrados.length === 0 && !busqueda && (
         <div className="info-box" style={{ marginBottom: 16, textAlign: 'center' }}>
-          ️ <b>¡Todo vendido!</b> No quedan números disponibles en esta rifa.
+          🏷️ <b>¡Todo vendido!</b> No quedan números disponibles en esta rifa.
         </div>
       )}
- 
+
       {/* Leyenda */}
       <div className="leyenda-row">
         <span><span className="leyenda-dot" style={{ background: 'var(--surface)', border: '1.5px solid var(--border)' }}></span>Disponible</span>
@@ -368,24 +485,28 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           <span><span className="leyenda-dot" style={{ background: 'var(--gold)' }}></span>Ganador</span>
         )}
       </div>
- 
+
       {/* Grid */}
       <div className="card">
         <NumeroGrid
           numeros={numerosFiltrados}
           onClickNumero={n => {
-            if (puedeEditar && rifa?.estado !== 'finalizada') {
-              setModalNum(n);
-            } else {
-              // cualquier usuario puede ver info del número apartado
+            if (!puedeEditar || rifa?.estado === 'finalizada') {
               if (n.apartado) setModalVerNumero(n);
+              return;
             }
+            // El creador no puede editar números apartados por un colaborador
+            if (esCreador && n.apartado && n.apartado_por && n.apartado_por !== user.id) {
+              setModalVerNumero(n);
+              return;
+            }
+            setModalNum(n);
           }}
           soloVer={false}
         />
       </div>
- 
-      {/* Números apartados — en modal */}
+
+      {/* Números apartados */}
       {totalApartados > 0 && (
         <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <h3 style={{ fontSize: 16 }}>Números apartados ({totalApartados})</h3>
@@ -394,8 +515,16 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           </button>
         </div>
       )}
- 
+
       {/* Modales */}
+      {modalEditar && (
+        <ModalEditarRifa
+          rifa={rifa}
+          onClose={() => setModalEditar(false)}
+          onGuardado={cargar}
+          toast={toast}
+        />
+      )}
       {modalNum && (
         <ModalNumero numero={modalNum} onClose={() => setModalNum(null)}
           onSave={handleSaveNumero} onDelete={handleDeleteNumero} />
@@ -414,6 +543,7 @@ export default function VistaRifa({ rifaId, user, onBack, toast }) {
           onClickNumero={n => { setModalApartados(false); setModalNum(n); }}
           puedeEditar={puedeEditar}
           rifa={rifa}
+          userId={user?.id}
         />
       )}
       {modalVerNumero && (

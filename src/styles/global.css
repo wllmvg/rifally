@@ -30,7 +30,7 @@ body {
   min-height: 100vh;
   font-size: 15px;
   line-height: 1.6;
-  /* overflow-x: hidden removido del body para no romper position: fixed en modales */
+  overflow-x: hidden;
 }
 
 h1,h2,h3,h4 { font-family: 'Space Grotesk', sans-serif; }
@@ -124,9 +124,8 @@ label { font-size: 13px; font-weight: 500; color: var(--text2); display: block; 
 /* ── MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-  display: flex; align-items: flex-start; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   z-index: 1000; padding: 16px;
-  overflow-y: auto;
   animation: overlayIn 0.2s ease both;
 }
 .modal {
@@ -134,7 +133,7 @@ label { font-size: 13px; font-weight: 500; color: var(--text2); display: block; 
   border-radius: var(--radius-lg);
   padding: 28px;
   max-width: 480px; width: 100%;
-  margin: auto;
+  max-height: 90vh; overflow-y: auto;
   animation: modalIn 0.28s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -445,4 +444,30 @@ label { font-size: 13px; font-weight: 500; color: var(--text2); display: block; 
   .num-cell { font-size: clamp(7px, 3vw, 10px); border-radius: 3px; }
   .modal { padding: 16px; }
   .card { padding: 12px; }
+}
+/* ── SCROLLBAR CUSTOM (solo desktop) ── */
+@media (min-width: 769px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 99px;
+    transition: background 0.2s;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text3);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
 }

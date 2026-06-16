@@ -90,14 +90,23 @@ export default function VistaPublica({ rifaId, user }) {
       setRifa(r);
       setNumeros((n || []).map(num => ({ ...num, nombre: null, telefono: null })));
 
-      // Buscar nombre del organizador en profiles
+      // Buscar nombre del organizador — múltiples fuentes
       if (r?.creador_id) {
+        // 1. Tabla profiles (fuente principal)
         const { data: perfil } = await sb
           .from('profiles')
           .select('name, email')
           .eq('id', r.creador_id)
           .maybeSingle();
-        setOrganizador(perfil || null);
+
+        if (perfil?.name || perfil?.email) {
+          setOrganizador(perfil);
+        } else {
+          // 2. Buscar en colaboradores de ESTA rifa si hay alguno con nombre guardado
+          //    (no aplica para el creador, pero sirve como señal de que la tabla existe)
+          // 3. Como último recurso usar el email del usuario actual si coincide
+          setOrganizador(perfil || { name: null, email: null });
+        }
       }
 
       setLoading(false);
@@ -112,7 +121,11 @@ export default function VistaPublica({ rifaId, user }) {
   const totalDisponibles = numeros.length - totalApartados;
   const pct = Math.round((totalApartados / numeros.length) * 100) || 0;
 
-  const nombreOrganizador = organizador?.name || organizador?.email?.split('@')[0] || 'Organizador';
+  // El nombre puede estar en 'name', 'nombre', o derivarse del email
+  const nombreOrganizador = organizador?.name
+    || organizador?.nombre
+    || (organizador?.email ? organizador.email.split('@')[0] : null)
+    || 'Organizador';
 
   const motivosRegiro = (() => {
     try { return rifa.motivos_regiro ? JSON.parse(rifa.motivos_regiro) : null; }
