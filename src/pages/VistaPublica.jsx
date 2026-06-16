@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { sb } from '../lib/supabaseClient';
 import NumeroGrid from '../components/NumeroGrid';
 import { TrophyIcon } from '../components/Icons';
-
+ 
 function Podio({ ganadores }) {
   if (!ganadores.length) return null;
   const [primero, segundo, tercero] = ganadores;
-
+ 
   const orden = ganadores.length === 1
     ? [{ g: primero, tipo: 'gold', emoji: '', label: '1°' }]
     : ganadores.length === 2
@@ -19,10 +19,10 @@ function Podio({ ganadores }) {
         { g: primero, tipo: 'gold', emoji: '', label: '1°' },
         { g: tercero, tipo: 'bronze', emoji: '', label: '3°' },
       ];
-
+ 
   const alturas = { gold: 80, silver: 60, bronze: 44 };
   const colores = { gold: 'var(--gold)', silver: '#aaa', bronze: '#cd7f32' };
-
+ 
   return (
     <div className="podio-container" style={{ marginBottom: 0 }}>
       {orden.map(({ g, tipo, emoji, label }) => (
@@ -38,7 +38,7 @@ function Podio({ ganadores }) {
     </div>
   );
 }
-
+ 
 function ModalVerNumeroPublico({ numero, onClose }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -74,67 +74,47 @@ function ModalVerNumeroPublico({ numero, onClose }) {
     </div>
   );
 }
-
+ 
 export default function VistaPublica({ rifaId, user }) {
   const [rifa, setRifa] = useState(null);
   const [numeros, setNumeros] = useState([]);
   const [organizador, setOrganizador] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalVerNumero, setModalVerNumero] = useState(null);
-
+ 
   useEffect(() => {
     (async () => {
       const { data: r } = await sb.from('rifas').select('*').eq('id', rifaId).single();
       const { data: n } = await sb.from('numeros').select('*').eq('rifa_id', rifaId).order('numero');
-
+ 
       setRifa(r);
       setNumeros((n || []).map(num => ({ ...num, nombre: null, telefono: null })));
-
-      // Buscar nombre del organizador — múltiples fuentes
-      if (r?.creador_id) {
-        // 1. Tabla profiles (fuente principal)
-        const { data: perfil } = await sb
-          .from('profiles')
-          .select('name, email')
-          .eq('id', r.creador_id)
-          .maybeSingle();
-
-        if (perfil?.name || perfil?.email) {
-          setOrganizador(perfil);
-        } else {
-          // 2. Buscar en colaboradores de ESTA rifa si hay alguno con nombre guardado
-          //    (no aplica para el creador, pero sirve como señal de que la tabla existe)
-          // 3. Como último recurso usar el email del usuario actual si coincide
-          setOrganizador(perfil || { name: null, email: null });
-        }
-      }
-
+ 
+      // Leer nombre del organizador directamente de la rifa (sin depender de RLS de profiles)
+      setOrganizador({ name: r?.creador_nombre || null, email: r?.creador_email || null });
+ 
       setLoading(false);
     })();
   }, [rifaId]);
-
+ 
   if (loading) return <div className="page"><div className="spinner"></div></div>;
   if (!rifa) return <div className="page"><p>Rifa no encontrada</p></div>;
-
+ 
   const ganadores = numeros.filter(n => n.ganador);
   const totalApartados = numeros.filter(n => n.apartado).length;
   const totalDisponibles = numeros.length - totalApartados;
   const pct = Math.round((totalApartados / numeros.length) * 100) || 0;
-
-  // El nombre puede estar en 'name', 'nombre', o derivarse del email
-  const nombreOrganizador = organizador?.name
-    || organizador?.nombre
-    || (organizador?.email ? organizador.email.split('@')[0] : null)
-    || 'Organizador';
-
+ 
+  const nombreOrganizador = organizador?.name || organizador?.email?.split('@')[0] || 'Organizador';
+ 
   const motivosRegiro = (() => {
     try { return rifa.motivos_regiro ? JSON.parse(rifa.motivos_regiro) : null; }
     catch { return null; }
   })();
-
+ 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
-
+ 
       {/* Hero — sin SVG */}
       <div className="publico-hero">
         <h1>{rifa.nombre}</h1>
@@ -154,7 +134,7 @@ export default function VistaPublica({ rifaId, user }) {
           <span> {pct}% vendido</span>
         </div>
       </div>
-
+ 
       {/* Descripción */}
       <div className="card" style={{ marginBottom: 24 }}>
         <h3 style={{ fontSize: 15, marginBottom: 10 }}> Sobre esta rifa</h3>
@@ -204,7 +184,7 @@ export default function VistaPublica({ rifaId, user }) {
           <div className="progress-fill" style={{ width: `${pct}%` }}></div>
         </div>
       </div>
-
+ 
       {/* Ganadores con podio */}
       {ganadores.length > 0 && (
         <div className="ganadores-banner" style={{ marginBottom: 28 }}>
@@ -227,7 +207,7 @@ export default function VistaPublica({ rifaId, user }) {
           )}
         </div>
       )}
-
+ 
       {/* Grid de números */}
       <div style={{ marginBottom: 12 }}>
         <h3 style={{ fontSize: 16, marginBottom: 4 }}>Números</h3>
@@ -235,7 +215,7 @@ export default function VistaPublica({ rifaId, user }) {
           Los números en <b style={{ color: 'var(--accent)' }}>color</b> ya están apartados. Los grises están disponibles.
         </p>
       </div>
-
+ 
       <div className="leyenda-row" style={{ marginBottom: 12 }}>
         <span><span className="leyenda-dot" style={{ background: 'var(--surface)', border: '1.5px solid var(--border)' }}></span>Disponible</span>
         <span><span className="leyenda-dot" style={{ background: 'var(--accent)' }}></span>Apartado</span>
@@ -243,7 +223,7 @@ export default function VistaPublica({ rifaId, user }) {
           <span><span className="leyenda-dot" style={{ background: 'var(--gold)' }}></span>Ganador</span>
         )}
       </div>
-
+ 
       <div className="card" style={{ textAlign: 'left' }}>
         <NumeroGrid
           numeros={numeros}
@@ -251,7 +231,7 @@ export default function VistaPublica({ rifaId, user }) {
           soloVer={false}
         />
       </div>
-
+ 
       {modalVerNumero && (
         <ModalVerNumeroPublico numero={modalVerNumero} onClose={() => setModalVerNumero(null)} />
       )}

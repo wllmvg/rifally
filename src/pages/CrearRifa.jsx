@@ -101,6 +101,8 @@ export default function CrearRifa({ user, onCreada, onBack, toast }) {
       precio: precio ? Number(precio) : null,
       total_numeros: Number(totalNum),
       creador_id: user.id,
+      creador_nombre: user.user_metadata?.nombre || user.user_metadata?.name || user.email?.split('@')[0] || null,
+      creador_email: user.email || null,
       estado: 'activa',
       ...(fechaCierre ? { fecha_cierre: fechaCierre } : {}),
     }).select().single();
