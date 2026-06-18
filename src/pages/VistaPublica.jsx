@@ -87,14 +87,21 @@ export default function VistaPublica({ rifaId, user }) {
 
   useEffect(() => {
     (async () => {
-      const { data: r } = await sb.from('rifas').select('*').eq('id', rifaId).single();
-      const { data: n } = await sb.from('numeros').select('*').eq('rifa_id', rifaId).order('numero');
+      // Vistas públicas sin PII (ver README → Migración 2): solo columnas no
+      // sensibles. nombre/telefono/creador_email nunca salen del servidor para
+      // sesiones anónimas; las tablas base están bloqueadas para anon vía RLS.
+      const { data: r } = await sb.from('rifas_publicas').select('*').eq('id', rifaId).single();
+      const { data: n } = await sb
+        .from('numeros_publicos')
+        .select('id, rifa_id, numero, apartado, ganador')
+        .eq('rifa_id', rifaId)
+        .order('numero');
 
       setRifa(r);
-      setNumeros((n || []).map(num => ({ ...num, nombre: null, telefono: null })));
+      setNumeros(n || []);
 
-      // Leer nombre del organizador directamente de la rifa (sin depender de RLS de profiles)
-      setOrganizador({ name: r?.creador_nombre || null, email: r?.creador_email || null });
+      // Nombre del organizador desde la vista pública (sin email)
+      setOrganizador({ name: r?.creador_nombre || null });
 
       setLoading(false);
     })();
@@ -108,7 +115,7 @@ export default function VistaPublica({ rifaId, user }) {
   const totalDisponibles = numeros.length - totalApartados;
   const pct = Math.round((totalApartados / numeros.length) * 100) || 0;
 
-  const nombreOrganizador = organizador?.name || organizador?.email?.split('@')[0] || 'Organizador';
+  const nombreOrganizador = organizador?.name || 'Organizador';
 
   const motivosRegiro = (() => {
     try { return rifa.motivos_regiro ? JSON.parse(rifa.motivos_regiro) : null; }
