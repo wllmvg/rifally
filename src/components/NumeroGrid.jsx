@@ -15,7 +15,7 @@ export default function NumeroGrid({ numeros, onClickNumero, soloVer = false }) 
           key={n.numero}
           className={`num-cell${n.apartado ? ' taken' : ''}${n.ganador ? ' winner' : ''}`}
           onClick={() => !soloVer && onClickNumero(n)}
-          title={n.apartado ? `${n.nombre}` : `Número ${n.numero}`}
+          title={n.apartado ? (n.nombre || 'Apartado') : `Número ${n.numero}`}
         >
           {n.numero}
           {n.ganador && (
