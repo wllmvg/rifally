@@ -109,19 +109,32 @@ export default function CrearRifa({ user, onCreada, onBack, toast }) {
 
     if (error) { toast('Error al crear la rifa', 'error'); setLoading(false); return; }
 
-    // Crear números
+    // Crear números en lotes con rollback si falla
     const filas = Array.from({ length: Number(totalNum) }, (_, i) => ({
       rifa_id: rifa.id, numero: i + 1, apartado: false,
     }));
     for (let i = 0; i < filas.length; i += 500) {
-      await sb.from('numeros').insert(filas.slice(i, i + 500));
+      const { error: errNum } = await sb.from('numeros').insert(filas.slice(i, i + 500));
+      if (errNum) {
+        await sb.from('numeros').delete().eq('rifa_id', rifa.id);
+        await sb.from('rifas').delete().eq('id', rifa.id);
+        toast('Error al crear los números. Intenta de nuevo.', 'error');
+        setLoading(false);
+        return;
+      }
     }
 
-    // Insertar colaboradores si hay
     if (colaboradores.length > 0) {
-      await sb.from('colaboradores').insert(
+      const { error: errColab } = await sb.from('colaboradores').insert(
         colaboradores.map(c => ({ rifa_id: rifa.id, email: c.email, nombre: c.nombre }))
       );
+      if (errColab) {
+        await sb.from('numeros').delete().eq('rifa_id', rifa.id);
+        await sb.from('rifas').delete().eq('id', rifa.id);
+        toast('Error al agregar colaboradores. Intenta de nuevo.', 'error');
+        setLoading(false);
+        return;
+      }
     }
 
     toast('¡Rifa creada exitosamente!', 'success');
